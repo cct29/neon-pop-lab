@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Neon Pop</title>
+<meta name="description" content="A neon circle-clicking game. Pop circles before they fade.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2319f0ff' stroke-width='4'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ff2fa6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07060f;
+  --panel: #141029;
+  --panel-2: #1b1636;
+  --line: #2f2858;
+  --text: #ece9ff;
+  --dim: #9a93c9;
+  --cyan: #19f0ff;
+  --pink: #ff2fa6;
+  --lime: #b6ff3c;
+  --amber: #ffb020;
+  --red: #ff4d5e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Chakra Petch', 'Trebuchet MS', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  background:
+    radial-gradient(1100px 700px at 15% -10%, #1d1244 0%, transparent 60%),
+    radial-gradient(900px 600px at 110% 110%, #2c0f3d 0%, transparent 55%),
+    var(--bg);
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(120, 100, 255, .06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 100, 255, .06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------- screens ---------- */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.screen.active { display: flex; }
+.screen.scroll.active { display: block; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.page { width: min(720px, 100%); margin: 0 auto; padding: 20px 20px 48px; }
+
+/* ---------- buttons, chips ---------- */
+.btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+  font-weight: 600;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.btn:hover { border-color: var(--cyan); box-shadow: 0 0 14px rgba(25, 240, 255, .25); }
+.btn.primary {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: #03141a;
+  font-weight: 700;
+  box-shadow: 0 0 18px rgba(25, 240, 255, .45);
+}
+.btn.primary:hover { box-shadow: 0 0 28px rgba(25, 240, 255, .7); }
+.btn.danger { color: var(--red); border-color: rgba(255, 77, 94, .5); }
+.btn.danger:hover { border-color: var(--red); box-shadow: 0 0 14px rgba(255, 77, 94, .3); }
+.btn.small { min-height: 36px; padding: 6px 14px; }
+.chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.chip.hot { color: var(--pink); border-color: rgba(255, 47, 166, .55); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------- menu ---------- */
+#menu { align-items: flex-start; justify-content: center; overflow-y: auto; }
+#ambient { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+.menu-inner {
+  position: relative;
+  z-index: 1;
+  margin: auto;
+  width: min(600px, 100%);
+  padding: 24px;
+  pointer-events: none;
+}
+.menu-inner button, .menu-inner .chips { pointer-events: auto; }
+.menu-inner .seg-note, .menu-inner .menu-label { pointer-events: none; }
+.logo {
+  margin: 0 0 6px;
+  font-size: clamp(60px, 15vw, 112px);
+  line-height: .88;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.logo span { display: block; }
+.logo .a { color: #eaffff; text-shadow: 0 0 6px var(--cyan), 0 0 22px var(--cyan), 0 0 56px rgba(25, 240, 255, .55); }
+.logo .b { color: #ffeaf6; text-shadow: 0 0 6px var(--pink), 0 0 22px var(--pink), 0 0 56px rgba(255, 47, 166, .55); }
+.tagline { margin: 14px 0 26px; color: var(--dim); font-size: 18px; }
+.modes { display: grid; gap: 12px; }
+.mode {
+  --a: var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 18px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--a);
+  border-radius: 12px;
+  background: rgba(20, 16, 41, .88);
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s, transform .15s;
+}
+.mode:hover, .mode:focus-visible { box-shadow: 0 0 22px color-mix(in srgb, var(--a) 45%, transparent); border-color: var(--a); }
+.mode:active { transform: scale(.99); }
+.mode .name { display: block; font-size: 22px; font-weight: 700; color: var(--a); }
+.mode .blurb { display: block; margin-top: 2px; color: var(--dim); font-size: 15px; line-height: 1.35; }
+.mode .best { flex: none; font-size: 15px; color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+.mode .best.none { color: var(--dim); }
+.menu-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; min-height: 0; }
+.warn { margin-top: 16px; color: var(--amber); font-size: 14px; pointer-events: auto; }
+
+/* ---------- difficulty presets ---------- */
+#menu-presets { margin-bottom: 18px; }
+.menu-label { margin: 0 0 8px; color: var(--dim); font-size: 14px; }
+.row-title { font-weight: 600; font-size: 17px; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.seg-btn {
+  --a: var(--cyan);
+  min-height: 44px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--a) 40%, var(--line));
+  background: rgba(20, 16, 41, .88);
+  color: var(--a);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.seg-btn:hover { border-color: var(--a); box-shadow: 0 0 12px color-mix(in srgb, var(--a) 35%, transparent); }
+.seg-btn[aria-pressed=true] {
+  border-color: var(--a);
+  background: color-mix(in srgb, var(--a) 18%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--a) 55%, transparent), inset 0 0 10px color-mix(in srgb, var(--a) 25%, transparent);
+  text-shadow: 0 0 8px var(--a);
+}
+.seg-note { margin: 8px 0 0; min-height: 1.4em; }
+
+/* ---------- settings & scores ---------- */
+.page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.page-head h1 { margin: 0; font-size: 30px; }
+.group { margin-top: 26px; }
+.group h2 { margin: 0 0 4px; font-size: 20px; color: var(--cyan); text-shadow: 0 0 12px rgba(25, 240, 255, .4); }
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+.row-text label { font-weight: 600; font-size: 17px; }
+.hint { margin: 2px 0 0; color: var(--dim); font-size: 14px; line-height: 1.4; }
+.val { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--cyan); }
+.row.range input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--cyan); height: 28px; margin: 0; }
+.preview {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, .25);
+}
+.switch { position: relative; width: 52px; height: 30px; flex: none; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border-radius: 999px; background: #241d44; border: 1px solid var(--line); transition: background .15s, border-color .15s, box-shadow .15s; pointer-events: none; }
+.switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--dim); transition: transform .15s, background .15s; }
+.switch input:checked + span { background: rgba(25, 240, 255, .2); border-color: var(--cyan); box-shadow: 0 0 12px rgba(25, 240, 255, .4); }
+.switch input:checked + span::after { transform: translateX(22px); background: var(--cyan); }
+.switch input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+.page-foot { margin-top: 28px; }
+
+.tabs { display: flex; gap: 8px; margin: 18px 0 14px; flex-wrap: wrap; }
+.tab { --a: var(--cyan); min-height: 40px; padding: 8px 16px; border-radius: 10px; border: 1px solid var(--line); background: transparent; cursor: pointer; font-weight: 600; }
+.tab[aria-selected=true] { border-color: var(--a); color: var(--a); box-shadow: 0 0 14px color-mix(in srgb, var(--a) 40%, transparent); background: rgba(255, 255, 255, .04); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: rgba(20, 16, 41, .7); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { padding: 10px 14px; text-align: left; white-space: nowrap; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+th { color: var(--dim); font-weight: 600; font-size: 14px; }
+tr:last-child td { border-bottom: 0; }
+td.score { font-weight: 700; color: var(--cyan); }
+td.setup { color: var(--dim); font-size: 13px; }
+.empty { padding: 28px 18px; color: var(--dim); text-align: center; }
+.data-actions { margin-top: 20px; }
+
+/* ---------- game ---------- */
+#game { flex-direction: column; }
+#hud {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 4vw, 36px);
+  padding: 8px 16px;
+  min-height: 62px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 8, 24, .85);
+}
+.stat { display: flex; flex-direction: column; line-height: 1.15; }
+.stat .lab { color: var(--dim); font-size: 12px; }
+.stat .v { font-size: clamp(20px, 5vw, 26px); font-weight: 700; font-variant-numeric: tabular-nums; }
+#v3 { color: var(--red); }
+.hud-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+#arena { position: relative; flex: 1; overflow: hidden; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; }
+#fx, #flash { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+#flash { box-shadow: inset 0 0 90px 10px var(--red); opacity: 0; z-index: 4; }
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+}
+#countdown { font-size: clamp(96px, 28vw, 200px); font-weight: 700; color: #eaffff; text-shadow: 0 0 10px var(--cyan), 0 0 40px var(--cyan); pointer-events: none; }
+#pause { background: rgba(7, 6, 15, .8); cursor: pointer; font-size: 28px; font-weight: 700; }
+#pause small { font-size: 16px; font-weight: 400; color: var(--dim); }
+
+/* circles */
+.circle {
+  --c: #19f0ff;
+  position: absolute;
+  border-radius: 50%;
+  animation: appear .09s ease-out;
+}
+@keyframes appear { from { transform: scale(.6); } to { transform: scale(1); } }
+.disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--c);
+  background: radial-gradient(circle, color-mix(in srgb, var(--c) 50%, transparent) 0%, color-mix(in srgb, var(--c) 14%, transparent) 72%);
+  box-shadow: 0 0 10px var(--c), 0 0 26px color-mix(in srgb, var(--c) 55%, transparent), inset 0 0 12px color-mix(in srgb, var(--c) 55%, transparent);
+}
+.disc::after { content: ''; position: absolute; left: 50%; top: 50%; width: 18%; height: 18%; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; opacity: .9; box-shadow: 0 0 8px #fff; }
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 8px var(--c);
+  opacity: .85;
+  pointer-events: none;
+  transform: scale(3);
+}
+.fx-ring { position: absolute; border-radius: 50%; border: 3px solid var(--c); box-shadow: 0 0 14px var(--c); }
+.fx-dot { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+
+/* menu ambient circles */
+.amb { opacity: .55; cursor: pointer; }
+.amb .ring { animation: ambRing 2600ms linear forwards; }
+@keyframes ambRing { from { transform: scale(3); } to { transform: scale(1); } }
+
+/* ---------- results ---------- */
+#results { align-items: center; justify-content: center; padding: 20px; }
+.card {
+  width: min(520px, 100%);
+  padding: 26px 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(20, 16, 41, .92);
+  box-shadow: 0 0 40px rgba(120, 80, 255, .15);
+}
+.card h1 { margin: 0 0 4px; font-size: 24px; color: var(--dim); font-weight: 600; }
+.big { font-size: clamp(56px, 16vw, 84px); font-weight: 700; line-height: 1.05; color: var(--cyan); text-shadow: 0 0 22px rgba(25, 240, 255, .5); font-variant-numeric: tabular-nums; }
+.big.fail { color: var(--red); text-shadow: 0 0 22px rgba(255, 77, 94, .5); }
+.sub { margin: 2px 0 14px; color: var(--dim); }
+.badge { display: inline-block; margin: 0 0 14px; padding: 4px 12px; border-radius: 999px; font-weight: 700; color: #1a1000; background: var(--amber); box-shadow: 0 0 16px rgba(255, 176, 32, .5); }
+.badge.plain { background: transparent; color: var(--amber); border: 1px solid rgba(255, 176, 32, .6); box-shadow: none; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 6px 0 16px; }
+.stats div { padding: 10px 8px; border-radius: 10px; background: var(--panel-2); text-align: center; }
+.stats b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stats span { color: var(--dim); font-size: 12px; }
+.card .chips { margin: 0 0 20px; }
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 50;
+  max-width: calc(100% - 32px);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 20px rgba(25, 240, 255, .3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+#toast.show { opacity: 1; }
+
+@media (max-width: 520px) {
+  .mode { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .mode .best { text-align: left; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  #hud { padding: 8px 12px; gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .circle { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Menu -->
+<main id="menu" class="screen active">
+  <div id="ambient" aria-hidden="true"></div>
+  <div class="menu-inner">
+    <h1 class="logo"><span class="a">Neon</span><span class="b">Pop</span></h1>
+    <p class="tagline">Pop every circle before it fades.</p>
+    <div id="menu-presets"></div>
+    <div class="modes">
+      <button class="mode" data-mode="timed" style="--a: var(--cyan)">
+        <span><span class="name">Timed</span><span class="blurb">Hit as many circles as you can before the clock runs out.</span></span>
+        <span class="best" id="best-timed"></span>
+      </button>
+      <button class="mode" data-mode="hit" style="--a: var(--lime)">
+        <span><span class="name">Hit Count</span><span class="blurb">Hit the target number of circles as fast as you can.</span></span>
+        <span class="best" id="best-hit"></span>
+      </button>
+      <button class="mode" data-mode="endless" style="--a: var(--amber)">
+        <span><span class="name">Endless</span><span class="blurb">Keep going until you end the run yourself.</span></span>
+        <span class="best" id="best-endless"></span>
+      </button>
+    </div>
+    <div class="chips" id="menu-chips"></div>
+    <div class="menu-actions">
+      <button class="btn" id="go-settings">Settings</button>
+      <button class="btn" id="go-scores">Scores</button>
+    </div>
+    <p class="warn" id="storage-warn" hidden>Browser storage is unavailable. Scores and settings will be lost when you close this tab.</p>
+  </div>
+</main>
+
+<!-- Settings -->
+<section id="settings" class="screen scroll">
+  <div class="page">
+    <div class="page-head">
+      <button class="btn small" data-back>Back</button>
+      <h1>Settings</h1>
+    </div>
+    <div id="settings-body"></div>
+    <div class="page-foot"><button class="btn danger" id="reset-settings">Reset to defaults</button></div>
+  </div>
+</section>
+
+<!-- Game -->
+<section id="game" class="screen">
+  <div id="hud">
+    <div class="stat"><span class="lab" id="l1"></span><span class="v" id="v1"></span></div>
+    <div class="stat"><span class="lab" id="l2"></span><span class="v" id="v2"></span></div>
+    <div class="stat"><span class="lab" id="l3">Misses</span><span class="v" id="v3"></span></div>
+    <div class="hud-right">
+      <span class="chip hot" id="hud-hardcore" hidden>Hardcore</span>
+      <button class="btn small" id="quit"></button>
+    </div>
+  </div>
+  <div id="arena">
+    <div id="fx"></div>
+    <div id="flash"></div>
+    <div id="countdown" class="overlay" hidden></div>
+    <div id="pause" class="overlay" hidden><span>Paused</span><small>Click to resume</small></div>
+  </div>
+</section>
+
+<!-- Results -->
+<section id="results" class="screen">
+  <div class="card" id="results-card"></div>
+</section>
+
+<!-- Scores -->
+<section id="scores" class="screen scroll">
+  <div class="page">
+    <div class="page-head">
+      <button class="btn small" data-back>Back</button>
+      <h1>Scores</h1>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Game mode">
+      <button class="tab" role="tab" data-tab="timed" style="--a: var(--cyan)">Timed</button>
+      <button class="tab" role="tab" data-tab="hit" style="--a: var(--lime)">Hit Count</button>
+      <button class="tab" role="tab" data-tab="endless" style="--a: var(--amber)">Endless</button>
+    </div>
+    <div id="scores-body"></div>
+    <div class="row-actions data-actions">
+      <button class="btn" id="export">Export data</button>
+      <button class="btn" id="import">Import data</button>
+      <button class="btn danger" id="clear">Clear data</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+    </div>
+    <p class="hint">Each mode keeps your top 10 runs. Export saves your settings and scores as a JSON file.</p>
+  </div>
+</section>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">Neon Pop needs JavaScript to run.</p></noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= helpers ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const h = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const fmtT = ms => (ms / 1000).toFixed(2) + 's';
+const fmtClock = ms => {
+  const s = ms / 1000;
+  if (s < 60) return s.toFixed(1) + 's';
+  return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+};
+const PALETTE = ['#19f0ff', '#ff2fa6', '#b6ff3c', '#ffb020'];
+const RED = '#ff4d5e';
+
+const MODES = {
+  timed:   { name: 'Timed' },
+  hit:     { name: 'Hit Count' },
+  endless: { name: 'Endless' }
+};
+
+/* ================= settings & storage ================= */
+const DEFAULTS = {
+  hardcore: false, clickMiss: false, assist: true, hindrance: false,
+  leniency: 1500, size: 96, spawn: 1000, duration: 30, target: 50,
+  volume: 50, mute: false
+};
+const LIMITS = {
+  leniency: [300, 3000, 50],
+  size:     [24, 160, 2],
+  spawn:    [200, 2000, 50],
+  duration: [10, 120, 5],
+  target:   [10, 200, 5],
+  volume:   [0, 100, 1]
+};
+// Normal and Expert are the two reference points.
+// Hard sits halfway between them; Easy mirrors Hard on the other side of Normal.
+// Visual assistance is on for Easy and Normal, off for Hard and Expert.
+const PRESETS = [
+  { id: 'easy',   name: 'Easy',   color: '#3dff7a', note: 'Big circles with plenty of time, and a closing ring to guide you.',
+    vals: { leniency: 2050, size: 108, spawn: 1350, assist: true,  hindrance: false } },
+  { id: 'normal', name: 'Normal', color: '#19f0ff', note: 'The recommended starting point, with a closing ring to guide you.',
+    vals: { leniency: 1500, size: 96,  spawn: 1000, assist: true,  hindrance: false } },
+  { id: 'hard',   name: 'Hard',   color: '#ffe94a', note: 'Smaller circles, shorter lifetime, faster pace, and no ring.',
+    vals: { leniency: 950,  size: 84,  spawn: 650,  assist: false, hindrance: false } },
+  { id: 'expert', name: 'Expert', color: '#ff8a1f', note: 'Tiny, quick circles that fade out right away, and no ring.',
+    vals: { leniency: 350,  size: 72,  spawn: 300,  assist: false, hindrance: true } }
+];
+const KEY_SETTINGS = 'neonpop.settings';
+const KEY_SCORES = 'neonpop.scores';
+
+let storageOK = true;
+const memStore = {};
+function loadKey(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch (e) {
+    storageOK = false;
+    return memStore[key] !== undefined ? memStore[key] : fallback;
+  }
+}
+function saveKey(key, val) {
+  memStore[key] = val;
+  try { localStorage.setItem(key, JSON.stringify(val)); }
+  catch (e) { storageOK = false; $('#storage-warn').hidden = false; }
+}
+
+function cleanSettings(o) {
+  const out = Object.assign({}, DEFAULTS);
+  if (!o || typeof o !== 'object') return out;
+  for (const k of Object.keys(DEFAULTS)) {
+    if (typeof DEFAULTS[k] === 'boolean') {
+      if (typeof o[k] === 'boolean') out[k] = o[k];
+    } else if (typeof o[k] === 'number' && Number.isFinite(o[k])) {
+      const [min, max, step] = LIMITS[k];
+      out[k] = Math.min(max, Math.max(min, Math.round(o[k] / step) * step));
+    }
+  }
+  return out;
+}
+function sortScores(mode, arr) {
+  arr.sort((a, b) => mode === 'hit' ? a.score - b.score : b.score - a.score);
+  return arr;
+}
+function cleanRec(r) {
+  if (!r || typeof r !== 'object') return null;
+  const keys = ['score', 'hits', 'misses', 'time', 'date'];
+  for (const k of keys) if (typeof r[k] !== 'number' || !Number.isFinite(r[k])) return null;
+  const total = r.hits + r.misses;
+  return {
+    score: r.score, hits: r.hits, misses: r.misses, time: r.time, date: r.date,
+    acc: total ? r.hits / total : 1,
+    reason: typeof r.reason === 'string' ? r.reason.slice(0, 10) : '',
+    cfg: cleanSettings(r.cfg)
+  };
+}
+function cleanScores(o) {
+  const out = { timed: [], hit: [], endless: [] };
+  if (!o || typeof o !== 'object') return out;
+  for (const m of Object.keys(out)) {
+    if (Array.isArray(o[m])) {
+      out[m] = sortScores(m, o[m].map(cleanRec).filter(Boolean)).slice(0, 10);
+    }
+  }
+  return out;
+}
+
+let settings = cleanSettings(loadKey(KEY_SETTINGS, null));
+let scores = cleanScores(loadKey(KEY_SCORES, null));
+const persistSettings = () => saveKey(KEY_SETTINGS, settings);
+const persistScores = () => saveKey(KEY_SCORES, scores);
+
+/* ================= audio ================= */
+let actx = null;
+let noiseBuf = null;
+function audio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    actx = new AC();
+  }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function playPop() {
+  if (settings.mute || settings.volume <= 0) return;
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime;
+  const vol = Math.pow(settings.volume / 100, 2) * 0.9;
+  const f = 700 * (0.94 + Math.random() * 0.12);
+
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(f * 1.6, t);
+  o.frequency.exponentialRampToValueAtTime(f * 0.35, t + 0.09);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(vol, 0.0002), t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o.connect(g).connect(a.destination);
+  o.start(t);
+  o.stop(t + 0.13);
+
+  if (!noiseBuf) {
+    noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * 0.025), a.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  }
+  const n = a.createBufferSource();
+  const ng = a.createGain();
+  const hp = a.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 1800;
+  n.buffer = noiseBuf;
+  ng.gain.value = vol * 0.35;
+  n.connect(hp).connect(ng).connect(a.destination);
+  n.start(t);
+}
+// Browsers only allow audio after a user gesture, so unlock on the first one.
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => audio(), { once: true }));
+
+/* ================= effects ================= */
+function popFx(layer, x, y, size, color) {
+  if (reduceMotion.matches) return;
+  const ring = h('div', 'fx-ring');
+  ring.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;--c:${color}`;
+  layer.append(ring);
+  ring.animate(
+    [{ transform: 'translate(-50%,-50%) scale(1)', opacity: .9 }, { transform: 'translate(-50%,-50%) scale(1.9)', opacity: 0 }],
+    { duration: 320, easing: 'ease-out' }
+  ).onfinish = () => ring.remove();
+  for (let i = 0; i < 8; i++) {
+    const ang = (Math.PI * 2 * i) / 8 + Math.random() * .5;
+    const dist = size * (.8 + Math.random() * .6);
+    const dot = h('div', 'fx-dot');
+    dot.style.cssText = `left:${x}px;top:${y}px;--c:${color}`;
+    layer.append(dot);
+    dot.animate(
+      [{ transform: 'translate(0,0) scale(1)', opacity: 1 },
+       { transform: `translate(${Math.cos(ang) * dist}px,${Math.sin(ang) * dist}px) scale(.2)`, opacity: 0 }],
+      { duration: 380, easing: 'ease-out' }
+    ).onfinish = () => dot.remove();
+  }
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ================= navigation ================= */
+let current = 'menu';
+function show(name) {
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === name));
+  current = name;
+  if (name === 'menu') { renderMenu(); startAmbient(); } else { stopAmbient(); }
+  if (name === 'scores') renderScores();
+  const sc = $('#' + name);
+  if (sc) sc.scrollTop = 0;
+}
+
+/* ================= menu ================= */
+function bestText(mode) {
+  const top = scores[mode][0];
+  if (!top) return null;
+  return 'Best ' + (mode === 'hit' ? fmtT(top.score) : top.score);
+}
+function renderMenu() {
+  for (const m of Object.keys(MODES)) {
+    const b = $('#best-' + m);
+    const txt = bestText(m);
+    b.textContent = txt || 'No runs yet';
+    b.classList.toggle('none', !txt);
+  }
+  const mp = $('#menu-presets');
+  mp.textContent = '';
+  mp.append(h('p', 'menu-label', 'Difficulty'), makePresetBar());
+  const chips = $('#menu-chips');
+  chips.textContent = '';
+  const mods = [];
+  if (settings.hardcore) mods.push(['Hardcore', true]);
+  // When a preset is active, its assist/hindrance settings are already implied by the selector.
+  if (!matchPreset()) {
+    if (settings.assist) mods.push(['Visual assistance', false]);
+    if (settings.hindrance) mods.push(['Visual hindrance', false]);
+  }
+  if (settings.clickMiss) mods.push(['Click-miss', false]);
+  mods.forEach(([t, hot]) => chips.append(h('span', 'chip' + (hot ? ' hot' : ''), t)));
+  $('#storage-warn').hidden = storageOK;
+}
+
+let ambTimer = null;
+function startAmbient() {
+  stopAmbient();
+  if (reduceMotion.matches) return;
+  ambTimer = setInterval(spawnAmbient, 1100);
+  spawnAmbient();
+}
+function stopAmbient() {
+  clearInterval(ambTimer);
+  ambTimer = null;
+  $('#ambient').textContent = '';
+}
+function spawnAmbient() {
+  const layer = $('#ambient');
+  if (document.hidden || layer.children.length >= 7) return;
+  const W = layer.clientWidth, H = layer.clientHeight;
+  const s = 48 + Math.random() * 48;
+  const m = s * 1.5;
+  const x = m + Math.random() * Math.max(0, W - m * 2);
+  const y = m + Math.random() * Math.max(0, H - m * 2);
+  const color = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+  const c = h('div', 'circle amb');
+  c.style.cssText = `width:${s}px;height:${s}px;left:${x - s / 2}px;top:${y - s / 2}px;--c:${color}`;
+  const ring = h('div', 'ring');
+  c.append(h('div', 'disc'), ring);
+  ring.addEventListener('animationend', () => c.remove());
+  c.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    playPop();
+    popFx(layer, x, y, s, color);
+    c.remove();
+  });
+  layer.append(c);
+}
+
+/* ================= difficulty presets ================= */
+function matchPreset() {
+  const p = PRESETS.find(p => Object.keys(p.vals).every(k => settings[k] === p.vals[k]));
+  return p ? p.id : null;
+}
+function paintPresetBar(wrap) {
+  const cur = matchPreset();
+  $$('.seg-btn', wrap).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.preset === cur)));
+  const p = PRESETS.find(x => x.id === cur);
+  $('.seg-note', wrap).textContent = p ? p.note : 'Custom values. Pick a preset to reset them.';
+}
+function refreshPresetBars() { $$('.presets').forEach(paintPresetBar); }
+function makePresetBar() {
+  const wrap = h('div', 'presets');
+  const seg = h('div', 'seg');
+  seg.setAttribute('role', 'group');
+  seg.setAttribute('aria-label', 'Difficulty preset');
+  PRESETS.forEach(p => {
+    const b = h('button', 'seg-btn', p.name);
+    b.type = 'button';
+    b.dataset.preset = p.id;
+    b.style.setProperty('--a', p.color);
+    b.addEventListener('click', () => applyPreset(p.id, b));
+    seg.append(b);
+  });
+  wrap.append(seg, h('p', 'hint seg-note'));
+  paintPresetBar(wrap);
+  return wrap;
+}
+function applyPreset(id, btn) {
+  const p = PRESETS.find(x => x.id === id);
+  if (!p) return;
+  const inSettings = !!btn.closest('#settings');
+  Object.assign(settings, p.vals);
+  persistSettings();
+  buildSettings();
+  renderMenu();
+  const again = $((inSettings ? '#settings' : '#menu') + ` .seg-btn[data-preset="${id}"]`);
+  if (again) again.focus();
+}
+
+/* ================= settings screen ================= */
+const UI = [
+  { title: 'Gameplay', items: [
+    { type: 'presets', label: 'Difficulty preset' },
+    { key: 'hardcore', type: 'toggle', label: 'Hardcore', hint: 'A miss ends the run immediately.' },
+    { key: 'clickMiss', type: 'toggle', label: 'Click-miss', hint: 'Clicking empty space counts as a miss.' },
+    { key: 'leniency', type: 'range', label: 'Circle leniency', hint: 'How long a circle stays before it counts as a miss.', unit: ' ms' },
+    { key: 'size', type: 'range', label: 'Circle size', unit: ' px', preview: true },
+    { key: 'spawn', type: 'range', label: 'Spawn interval', hint: 'Time between new circles.', unit: ' ms' },
+    { key: 'duration', type: 'range', label: 'Timed duration', unit: ' s' },
+    { key: 'target', type: 'range', label: 'Hit Count target', unit: ' hits' }
+  ]},
+  { title: 'Assist and hindrance', items: [
+    { key: 'assist', type: 'toggle', label: 'Visual assistance', hint: 'A ring closes in on each circle until its time runs out.' },
+    { key: 'hindrance', type: 'toggle', label: 'Visual hindrance', hint: 'Circles fade out about 250 ms after appearing. You can still hit them.' }
+  ]},
+  { title: 'Audio', items: [
+    { key: 'volume', type: 'range', label: 'Pop volume', unit: '%' },
+    { key: 'mute', type: 'toggle', label: 'Mute' }
+  ]}
+];
+
+function buildSettings() {
+  const root = $('#settings-body');
+  root.textContent = '';
+  UI.forEach(sec => {
+    const g = h('section', 'group');
+    g.append(h('h2', null, sec.title));
+    sec.items.forEach(it => {
+      if (it.type === 'presets') {
+        const prow = h('div', 'row');
+        prow.append(h('div', 'row-title', it.label), makePresetBar());
+        prow.lastChild.style.gridColumn = '1 / -1';
+        g.append(prow);
+        return;
+      }
+      const id = 'set-' + it.key;
+      const row = h('div', 'row ' + it.type);
+      const text = h('div', 'row-text');
+      const lab = h('label', null, it.label);
+      lab.htmlFor = id;
+      text.append(lab);
+      if (it.hint) text.append(h('p', 'hint', it.hint));
+
+      if (it.type === 'toggle') {
+        const sw = h('label', 'switch');
+        const inp = document.createElement('input');
+        inp.type = 'checkbox';
+        inp.id = id;
+        inp.checked = !!settings[it.key];
+        inp.addEventListener('change', () => {
+          settings[it.key] = inp.checked;
+          persistSettings();
+          if (it.key === 'mute' && !inp.checked) playPop();
+          refreshPresetBars();
+        });
+        sw.append(inp, h('span'));
+        row.append(text, sw);
+      } else {
+        const [min, max, step] = LIMITS[it.key];
+        const out = h('output', 'val');
+        const inp = document.createElement('input');
+        inp.type = 'range';
+        inp.id = id;
+        inp.min = min; inp.max = max; inp.step = step;
+        inp.value = settings[it.key];
+        let prev = null, dot = null;
+        const paint = () => {
+          out.textContent = settings[it.key] + it.unit;
+          if (prev) {
+            const s = settings.size;
+            prev.style.height = Math.max(72, s + 32) + 'px';
+            dot.style.width = dot.style.height = s + 'px';
+          }
+        };
+        inp.addEventListener('input', () => {
+          settings[it.key] = +inp.value;
+          paint();
+          persistSettings();
+          refreshPresetBars();
+        });
+        if (it.key === 'volume') inp.addEventListener('change', playPop);
+        row.append(text, out, inp);
+        if (it.preview) {
+          prev = h('div', 'preview');
+          dot = h('div', 'circle');
+          dot.style.animation = 'none';
+          dot.style.position = 'relative';
+          dot.append(h('div', 'disc'));
+          prev.append(dot);
+          row.append(prev);
+        }
+        paint();
+      }
+      g.append(row);
+    });
+    root.append(g);
+  });
+}
+
+/* ================= game ================= */
+const arena = $('#arena');
+const fxLayer = $('#fx');
+const G = {
+  state: 'idle', mode: null, cfg: null, circles: [],
+  hits: 0, misses: 0, start: 0, nextSpawn: 0, raf: 0,
+  pausedAt: 0, runId: 0, timers: [], ended: false, lastColor: -1
+};
+let lastMode = 'timed';
+const hudCache = {};
+
+function setText(id, v) {
+  if (hudCache[id] !== v) { hudCache[id] = v; document.getElementById(id).textContent = v; }
+}
+function updateHud(elapsed) {
+  const cfg = G.cfg, mode = G.mode;
+  setText('v1', mode === 'hit' ? `${G.hits} / ${cfg.target}` : String(G.hits));
+  setText('v2', mode === 'timed' ? fmtClock(Math.max(0, cfg.duration * 1000 - elapsed))
+              : mode === 'hit' ? fmtT(elapsed) : fmtClock(elapsed));
+  setText('v3', String(G.misses));
+}
+
+function startRun(mode) {
+  cancelRun();
+  lastMode = mode;
+  G.mode = mode;
+  G.cfg = Object.assign({}, settings);
+  G.hits = 0; G.misses = 0; G.ended = false; G.circles = [];
+  G.runId++;
+  G.state = 'countdown';
+  Object.keys(hudCache).forEach(k => delete hudCache[k]);
+  setText('l1', 'Hits');
+  setText('l2', mode === 'timed' ? 'Time left' : 'Time');
+  $('#quit').textContent = mode === 'endless' ? 'End run' : 'Quit';
+  $('#hud-hardcore').hidden = !G.cfg.hardcore;
+  show('game');
+  updateHud(0);
+  countdown(G.runId, 3);
+}
+function countdown(id, n) {
+  if (G.runId !== id || G.state !== 'countdown') return;
+  const c = $('#countdown');
+  if (n === 0) { c.hidden = true; beginRun(); return; }
+  c.textContent = n;
+  c.hidden = false;
+  c.animate([{ transform: 'scale(1.5)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 260, easing: 'ease-out' });
+  G.timers.push(setTimeout(() => countdown(id, n - 1), 750));
+}
+function beginRun() {
+  G.state = 'running';
+  const now = performance.now();
+  G.start = now;
+  G.nextSpawn = now;
+  G.raf = requestAnimationFrame(loop);
+}
+function cancelRun() {
+  cancelAnimationFrame(G.raf);
+  G.timers.forEach(clearTimeout);
+  G.timers = [];
+  G.state = 'idle';
+  G.circles = [];
+  $$('#arena .circle').forEach(n => n.remove());
+  $('#countdown').hidden = true;
+  $('#pause').hidden = true;
+}
+
+function spawnCircle(now) {
+  const cfg = G.cfg;
+  const s = cfg.size, r = s / 2;
+  const m = (cfg.assist ? s * 1.5 : r) + 6;
+  const W = arena.clientWidth, H = arena.clientHeight;
+  let best = null, bestGap = -1;
+  for (let i = 0; i < 25; i++) {
+    const x = W > m * 2 ? m + Math.random() * (W - m * 2) : W / 2;
+    const y = H > m * 2 ? m + Math.random() * (H - m * 2) : H / 2;
+    let gap = Infinity;
+    for (const c of G.circles) gap = Math.min(gap, Math.hypot(c.x - x, c.y - y));
+    if (gap > bestGap) { bestGap = gap; best = { x, y }; }
+    if (gap >= s * 1.15) break;
+  }
+  let ci;
+  do { ci = Math.floor(Math.random() * PALETTE.length); } while (ci === G.lastColor);
+  G.lastColor = ci;
+  const color = PALETTE[ci];
+
+  const node = h('div', 'circle');
+  node.style.cssText = `width:${s}px;height:${s}px;left:${best.x - r}px;top:${best.y - r}px;--c:${color}`;
+  const disc = h('div', 'disc');
+  node.append(disc);
+  let ring = null;
+  if (cfg.assist) { ring = h('div', 'ring'); node.append(ring); }
+  const c = { node, disc, ring, x: best.x, y: best.y, size: s, color, born: now, dead: false };
+  node.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    hitCircle(c);
+  });
+  arena.insertBefore(node, fxLayer);
+  G.circles.push(c);
+}
+function removeCircle(c) {
+  c.dead = true;
+  const i = G.circles.indexOf(c);
+  if (i >= 0) G.circles.splice(i, 1);
+}
+function hitCircle(c) {
+  if (G.state !== 'running' || c.dead) return;
+  removeCircle(c);
+  c.node.remove();
+  G.hits++;
+  playPop();
+  popFx(fxLayer, c.x, c.y, c.size, c.color);
+  const now = performance.now();
+  updateHud(now - G.start);
+  if (G.mode === 'hit' && G.hits >= G.cfg.target) finish('target');
+}
+function flashMiss() {
+  $('#flash').animate([{ opacity: .85 }, { opacity: 0 }], { duration: 280, easing: 'ease-out' });
+}
+function expireCircle(c) {
+  removeCircle(c);
+  G.misses++;
+  flashMiss();
+  c.node.style.setProperty('--c', RED);
+  const a = c.node.animate(
+    [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: reduceMotion.matches ? 'scale(1)' : 'scale(.6)' }],
+    { duration: 220, easing: 'ease-in' }
+  );
+  a.onfinish = () => c.node.remove();
+  if (G.cfg.hardcore) finish('miss');
+}
+function emptyClickMiss(e) {
+  if (G.state !== 'running' || !G.cfg.clickMiss) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const r = arena.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  G.misses++;
+  flashMiss();
+  popFx(fxLayer, x, y, 28, RED);
+  updateHud(performance.now() - G.start);
+  if (G.cfg.hardcore) finish('miss');
+}
+arena.addEventListener('pointerdown', emptyClickMiss);
+arena.addEventListener('contextmenu', e => e.preventDefault());
+
+function loop() {
+  if (G.state !== 'running') return;
+  const now = performance.now();
+  const cfg = G.cfg;
+  const elapsed = now - G.start;
+
+  if (G.mode === 'timed' && elapsed >= cfg.duration * 1000) { finish('time'); return; }
+
+  for (const c of G.circles.slice()) {
+    const age = now - c.born;
+    if (age >= cfg.leniency) {
+      expireCircle(c);
+      if (G.ended) return;
+      continue;
+    }
+    if (c.ring) c.ring.style.transform = `scale(${1 + 2 * (1 - age / cfg.leniency)})`;
+    if (cfg.hindrance) c.disc.style.opacity = String(Math.max(0, 1 - age / 250));
+  }
+
+  if (now >= G.nextSpawn) {
+    if (now - G.nextSpawn > cfg.spawn * 3) G.nextSpawn = now;
+    spawnCircle(now);
+    G.nextSpawn += cfg.spawn;
+  }
+
+  updateHud(elapsed);
+  G.raf = requestAnimationFrame(loop);
+}
+
+function pauseRun() {
+  if (G.state !== 'running') return;
+  G.state = 'paused';
+  G.pausedAt = performance.now();
+  cancelAnimationFrame(G.raf);
+  $('#pause').hidden = false;
+}
+function resumeRun() {
+  if (G.state !== 'paused') return;
+  const d = performance.now() - G.pausedAt;
+  G.start += d;
+  G.nextSpawn += d;
+  G.circles.forEach(c => { c.born += d; });
+  G.state = 'running';
+  $('#pause').hidden = true;
+  G.raf = requestAnimationFrame(loop);
+}
+$('#pause').addEventListener('pointerdown', e => { e.stopPropagation(); resumeRun(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseRun(); });
+
+function leaveGame() {
+  if (G.state === 'idle') return;
+  if (G.mode === 'endless' && G.state !== 'countdown') finish('manual');
+  else { cancelRun(); show('menu'); }
+}
+$('#quit').addEventListener('click', leaveGame);
+
+function finish(reason) {
+  if (G.ended) return;
+  G.ended = true;
+  const now = G.state === 'paused' ? G.pausedAt : performance.now();
+  const cfg = G.cfg, mode = G.mode;
+  let elapsed = now - G.start;
+  if (reason === 'time') elapsed = cfg.duration * 1000;
+  cancelAnimationFrame(G.raf);
+  G.state = 'idle';
+  $('#pause').hidden = true;
+  G.circles.forEach(c => c.node.remove());
+  G.circles = [];
+
+  const hits = G.hits, misses = G.misses, total = hits + misses;
+  const failed = mode === 'hit' && reason !== 'target';
+  const rec = {
+    score: mode === 'hit' ? Math.round(elapsed) : hits,
+    hits, misses,
+    acc: total ? hits / total : 1,
+    time: Math.round(elapsed),
+    date: Date.now(),
+    reason,
+    cfg: Object.assign({}, cfg)
+  };
+  let rank = -1;
+  if (!failed && (mode === 'hit' || hits > 0)) rank = addScore(mode, rec);
+  showResults(mode, rec, rank, failed);
+}
+function addScore(mode, rec) {
+  const arr = scores[mode];
+  arr.push(rec);
+  sortScores(mode, arr);
+  if (arr.length > 10) arr.length = 10;
+  persistScores();
+  return arr.indexOf(rec);
+}
+
+/* ================= results ================= */
+function setupTags(cfg) {
+  const t = [];
+  if (cfg.hardcore) t.push('Hardcore');
+  if (cfg.assist) t.push('Assist');
+  if (cfg.hindrance) t.push('Hindrance');
+  if (cfg.clickMiss) t.push('Click-miss');
+  t.push(cfg.size + 'px', cfg.leniency + 'ms life', cfg.spawn + 'ms spawn');
+  return t;
+}
+function showResults(mode, rec, rank, failed) {
+  const card = $('#results-card');
+  card.textContent = '';
+  let title, big, sub = '';
+  if (failed) {
+    title = 'Run failed';
+    big = 'Failed';
+    sub = `You missed after ${rec.hits} of ${rec.cfg.target} hits.`;
+  } else if (mode === 'hit') {
+    title = 'Target reached';
+    big = fmtT(rec.score);
+    sub = `${rec.cfg.target} circles hit`;
+  } else if (mode === 'timed') {
+    title = rec.reason === 'miss' ? 'Run ended on a miss' : "Time's up";
+    big = String(rec.hits);
+    sub = 'circles hit';
+  } else {
+    title = rec.reason === 'miss' ? 'Run ended on a miss' : 'Run ended';
+    big = String(rec.hits);
+    sub = 'circles hit';
+  }
+  card.append(h('h1', null, `${MODES[mode].name}: ${title}`));
+  card.append(h('div', 'big' + (failed ? ' fail' : ''), big));
+  card.append(h('p', 'sub', sub));
+  if (rank === 0) card.append(h('span', 'badge', 'New best'));
+  else if (rank > 0) card.append(h('span', 'badge plain', 'Top 10: rank ' + (rank + 1)));
+
+  const stats = h('div', 'stats');
+  [['Hits', rec.hits], ['Misses', rec.misses],
+   ['Accuracy', Math.round(rec.acc * 100) + '%'],
+   ['Time', fmtClock(rec.time)]].forEach(([k, v]) => {
+    const d = h('div');
+    d.append(h('b', null, String(v)), h('span', null, k));
+    stats.append(d);
+  });
+  card.append(stats);
+
+  const chips = h('div', 'chips');
+  setupTags(rec.cfg).forEach(t => chips.append(h('span', 'chip', t)));
+  card.append(chips);
+
+  const acts = h('div', 'row-actions');
+  const retry = h('button', 'btn primary', 'Play again');
+  retry.addEventListener('click', () => startRun(mode));
+  const menu = h('button', 'btn', 'Menu');
+  menu.addEventListener('click', () => show('menu'));
+  const sc = h('button', 'btn', 'Scores');
+  sc.addEventListener('click', () => { scoreTab = mode; show('scores'); });
+  acts.append(retry, menu, sc);
+  card.append(acts);
+
+  show('results');
+  retry.focus();
+}
+
+/* ================= scores screen ================= */
+let scoreTab = 'timed';
+function renderScores() {
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === scoreTab)));
+  const body = $('#scores-body');
+  body.textContent = '';
+  const list = scores[scoreTab];
+  if (!list.length) {
+    body.append(h('div', 'table-wrap empty', `No ${MODES[scoreTab].name} runs yet. Finish a run to set your first score.`));
+    return;
+  }
+  const wrap = h('div', 'table-wrap');
+  const table = h('table');
+  const head = h('tr');
+  ['Rank', 'Score', 'Hits', 'Misses', 'Accuracy', 'Date', 'Setup'].forEach(t => head.append(h('th', null, t)));
+  const thead = h('thead');
+  thead.append(head);
+  table.append(thead);
+  const tb = h('tbody');
+  list.forEach((r, i) => {
+    const tr = h('tr');
+    tr.append(
+      h('td', null, String(i + 1)),
+      h('td', 'score', scoreTab === 'hit' ? fmtT(r.score) : String(r.score)),
+      h('td', null, String(r.hits)),
+      h('td', null, String(r.misses)),
+      h('td', null, Math.round(r.acc * 100) + '%'),
+      h('td', null, new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })),
+      h('td', 'setup', setupTags(r.cfg).join(', '))
+    );
+    tb.append(tr);
+  });
+  table.append(tb);
+  wrap.append(table);
+  body.append(wrap);
+}
+$$('.tab').forEach(t => t.addEventListener('click', () => { scoreTab = t.dataset.tab; renderScores(); }));
+
+/* ---- export / import / clear ---- */
+$('#export').addEventListener('click', () => {
+  const data = { app: 'neon-pop', version: 1, exportedAt: new Date().toISOString(), settings, scores };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = h('a');
+  a.href = url;
+  a.download = `neon-pop-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Exported your settings and scores.');
+});
+$('#import').addEventListener('click', () => $('#import-file').click());
+$('#import-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data || typeof data !== 'object' || (!data.settings && !data.scores)) throw new Error('shape');
+    if (!confirm('Import this file? Your settings will be replaced, and the scores will be merged with your current top 10 lists.')) return;
+    if (data.settings) settings = cleanSettings(data.settings);
+    const inc = cleanScores(data.scores);
+    for (const m of Object.keys(scores)) {
+      const seen = new Set(scores[m].map(r => `${r.date}|${r.score}|${r.hits}`));
+      inc[m].forEach(r => { if (!seen.has(`${r.date}|${r.score}|${r.hits}`)) scores[m].push(r); });
+      sortScores(m, scores[m]);
+      scores[m].length = Math.min(scores[m].length, 10);
+    }
+    persistSettings();
+    persistScores();
+    buildSettings();
+    renderScores();
+    toast('Import complete.');
+  } catch (err) {
+    toast("That file isn't a valid Neon Pop export.");
+  }
+});
+$('#clear').addEventListener('click', () => {
+  if (!confirm('Delete all saved scores and reset your settings? This cannot be undone.')) return;
+  scores = { timed: [], hit: [], endless: [] };
+  settings = Object.assign({}, DEFAULTS);
+  persistScores();
+  persistSettings();
+  buildSettings();
+  renderScores();
+  toast('All data cleared.');
+});
+$('#reset-settings').addEventListener('click', () => {
+  settings = Object.assign({}, DEFAULTS);
+  persistSettings();
+  buildSettings();
+  toast('Settings reset to defaults.');
+});
+
+/* ================= wiring ================= */
+$$('.mode').forEach(b => b.addEventListener('click', () => startRun(b.dataset.mode)));
+$('#go-settings').addEventListener('click', () => show('settings'));
+$('#go-scores').addEventListener('click', () => show('scores'));
+$$('[data-back]').forEach(b => b.addEventListener('click', () => show('menu')));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (current === 'game') leaveGame();
+  else if (current === 'settings' || current === 'scores' || current === 'results') show('menu');
+});
+
+buildSettings();
+show('menu');
+})();
+</script>
+</body>
+</html>
